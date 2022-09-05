@@ -345,8 +345,12 @@ with tab1:
     st.subheader("Do the match schedule impact the team popularity")
     st.plotly_chart(fig_team_perc, use_container_width=True)
     g_col1, g_col2 = st.columns(2)
-    g_col1.image("images/hof.png")
-    g_col2.image("images/w1_rav.png")
+    g_col1.image(
+        "https://raw.githubusercontent.com/jokersden/nflallday/main/images/hof.png"
+    )
+    g_col2.image(
+        "https://raw.githubusercontent.com/jokersden/nflallday/main/images/w1_rav.png"
+    )
     st.info(
         "The Hall of Fame weekend and first Weekend, Jaguars and Ravens certainly had some fans,"
         " During the Hall of Fame Weekend when Jaguars played against Raiders, Jaguars seemed to have an uptick in the sales volume accounting for 15.7% of the total sales volume on 5th of August and 12.4% of the total sales volume on 6th of August"
@@ -354,6 +358,8 @@ with tab1:
         "On the other hand the victorious Ravens had become a fan favorite during the 1st weekend of the preseason with 20.8% of the total sales volume on the game day, 12th and 10+% of all the sales during the next two days."
         "Green Bay Packers were also pretty hot in the second preseason weekend which shows that the game schedules have a big correlation with fans buying/selling their moments."
     )
+
+    st.error("Team trends in next tab...", icon="🏈")
 
 with tab2:
     pass
