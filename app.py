@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 import pandas as pd
+import numpy as np
 import streamlit as st
 
 from shroomdk import ShroomDK
@@ -31,10 +32,11 @@ hide_st_style = """
             </style>
             """
 # st.markdown(hide_st_style, unsafe_allow_html=True)
+
 st.success("Please Note: All the dates and time are in US/New York time.", icon="⏰")
 
 
-@st.cache(allow_output_mutation=True, ttl=30 * 60)
+@st.cache(allow_output_mutation=True, ttl=30 * 60, show_spinner=False)
 def load_data():
     daily_sales_sql = f"""
     select 
@@ -43,6 +45,7 @@ def load_data():
         player, 
         team, 
         season, 
+        MOMENT_STATS_FULL:metadata:playerPosition as player_position,
         avg(price) as avg_price, 
         sum(price) as total, 
         count(distinct seller) as sellers,
@@ -55,18 +58,19 @@ def load_data():
     where 
         block_timestamp >= '2022-08-01' 
         and TX_SUCCEEDED='TRUE'
-    group by date, moment_tier, player, team, season
+    group by date, moment_tier, player, team, season, player_position
     """
     return pd.DataFrame(sdk.query(daily_sales_sql).records)
 
 
 st.text("")
-date_col1, date_col2 = st.columns(2)
+date_col1, date_col2, date_col3 = st.columns(3)
 date_col1.metric(
     "Preseason start date",
     "4th of August",
 )
-date_col2.metric(
+date_col2.metric("", "")
+date_col3.metric(
     "Preseason end date",
     "28th of August",
 )
@@ -81,7 +85,8 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(
     ]
 )
 
-df_daily_sales = load_data()
+with st.spinner("Stay tight lads, we're reading data..."):
+    df_daily_sales = load_data()
 df_daily_sales.date = pd.to_datetime(df_daily_sales.date)
 df_sum = df_daily_sales.groupby("date").sum().reset_index()
 df_preseason = df_sum[df_sum.date >= datetime(2022, 8, 4)]
@@ -209,7 +214,9 @@ with tab1:
 
     st.plotly_chart(fig, use_container_width=True)
     m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-    m_col1.metric("Total Sales Volume in Preseason(USD)", df_preseason.total.sum())
+    m_col1.metric(
+        "Total Sales Volume in Preseason(USD)", f"$ {df_preseason.total.sum()}"
+    )
     m_col2.metric("Total number of Sales in Preseason", df_preseason.sales.sum())
     m_col3.metric(
         "Day with the highest sales volume in the Preseason",
@@ -269,7 +276,7 @@ with tab1:
     ]
 
     m_col4.metric(
-        "The Volumes in Weekends than in other days",
+        "The Volumes in Weekends than in other days in Preseason",
         f"{round(weekends.total.sum() / non_weekends.total.sum(), 1)}X",
     )
     st.info(
@@ -358,11 +365,100 @@ with tab1:
         "On the other hand the victorious Ravens had become a fan favorite during the 1st weekend of the preseason with 20.8% of the total sales volume on the game day, 12th and 10+% of all the sales during the next two days."
         "Green Bay Packers were also pretty hot in the second preseason weekend which shows that the game schedules have a big correlation with fans buying/selling their moments."
     )
+    gcol3, gcol4 = st.columns(2)
+    gcol4.image(
+        "https://raw.githubusercontent.com/jokersden/nflallday/main/images/bills.png"
+    )
+    gcol3.info(
+        "The interest seems to have skyrocketted with the start of new season. The Bills have 25% of the sales on both "
+        "8th and 9th with the victory of the opening match."
+    )
 
     st.error("Team trends in next tab...", icon="🏈")
 
 with tab2:
+    df_daily_sales_ps = df_daily_sales[df_daily_sales.date >= datetime(2022, 8, 4)]
+    df_daily_sales_ps = df_daily_sales_ps[
+        df_daily_sales_ps.date <= datetime(2022, 8, 28)
+    ]
+
+    pivotted = (
+        df_daily_sales_ps.groupby(["season", "team"])
+        .agg({"avg_price": lambda x: np.log(np.mean(x))})
+        .reset_index()
+        .pivot("season", "team", values="avg_price")
+    )
+
+    fig_team_season_avg = go.Figure(
+        data=go.Heatmap(
+            z=pivotted.values.tolist(),
+            x=pivotted.columns.tolist(),
+            y=pivotted.index.tolist(),
+            hoverongaps=False,
+            hovertext=np.exp(pivotted.values).tolist(),
+        ),
+    )
+    fig_team_season_avg.update_traces(
+        hovertemplate="<br>".join(
+            ["Team: %{x}", "Season: %{y}", "Average Price: %{hovertext:.2f} USD"]
+        )
+    )
+    # st.subheader("Which team had priceless moments")
+    fig_team_season_avg.update_layout(
+        title="Which moments were most priceless",
+        yaxis={
+            "title": "Season",
+        },
+        xaxis={"title": "Team", "tickangle": 45},
+        # yaxis_nticks=len(pivotted.index)
+    )
+    st.plotly_chart(fig_team_season_avg, use_container_width=True)
+    st.info("")
+    team_col1, team_col2 = st.columns(2)
+    team_col1.plotly_chart(
+        px.bar(
+            df_daily_sales_ps.groupby(["team", "moment_tier"])
+            .sum()
+            .reset_index()
+            .sort_values(by="total", ascending=False),
+            x="team",
+            y="total",
+            color="moment_tier",
+        ),
+        use_container_width=True,
+    )
+    pivotted = (
+        df_daily_sales_ps.groupby(["team", "season"])
+        .agg({"total": lambda x: np.log(np.sum(x))})
+        .reset_index()
+        .pivot("season", "team", values="total")
+    )
+
+    fig_team_season_tot = go.Figure(
+        data=go.Heatmap(
+            z=pivotted.values.tolist(),
+            x=pivotted.columns.tolist(),
+            y=pivotted.index.tolist(),
+            hoverongaps=False,
+            hovertext=np.exp(pivotted.values).tolist(),
+        )
+    )
+    fig_team_season_tot.update_traces(
+        hovertemplate="<br>".join(
+            ["Team: %{x}", "Season: %{y}", "Total Volume: %{hovertext:.2f} USD"]
+        )
+    )
+    team_col2.plotly_chart(fig_team_season_tot, use_container_width=True)
+    st.info("")
+    st.video("https://www.youtube.com/watch?v=VjDsksvzXwg")
+
+
+with tab3:
     pass
+
+with tab4:
+    pass
+
 with tab5:
     st.write(
         "This was created by joker#2418 as a part of the tournament organized by FlipsideCrypto on NFL AllDay data. Following source was used to find dates and other info: https://operations.nfl.com/gameday/nfl-schedule/2022-23-important-nfl-dates/"
