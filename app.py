@@ -11,6 +11,9 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.io as pio
 
+from daily import get_daily_team_fig, get_daily_trends
+from utils import get_non_weekends, get_weekends
+
 pio.templates.default = "plotly_dark"
 
 API_KEY = os.getenv("API_KEY")
@@ -22,17 +25,22 @@ st.set_page_config(
     layout="wide",
     menu_items=dict(About="it's a work of joker#2418"),
 )
-st.markdown(
-    """
-<iframe
-    frameborder="0"
-    height="100%"
-    width="100%"
-    src="https://youtube.com/embed/VjDsksvzXwg?autoplay=1&controls=0&showinfo=0&autohide=1&loop=1"
-  >
-  </iframe>
-    """,
-    unsafe_allow_html=True,
+# st.markdown(
+#    """
+# <iframe
+#    frameborder="0"
+#    height="100%"
+#    width="100%"
+#    src="https://youtube.com/embed/VjDsksvzXwg?autoplay=1&controls=0&showinfo=0&autohide=1&loop=1"
+#  >
+#  </iframe>
+#    """,
+#    unsafe_allow_html=True,
+# )
+
+st.image(
+    "https://wwwimage-us.pplusstatic.com/base/files/blog/nflquizheaderimage.jpeg",
+    use_column_width=True,
 )
 st.title(":football: NFL All Day - Preseason! :football:")
 
@@ -58,6 +66,7 @@ def load_data():
         player, 
         team, 
         season, 
+        play_type,
         MOMENT_STATS_FULL:metadata:playerPosition as player_position,
         avg(price) as avg_price, 
         sum(price) as total, 
@@ -71,9 +80,23 @@ def load_data():
     where 
         block_timestamp >= '2022-08-01' 
         and TX_SUCCEEDED='TRUE'
-    group by date, moment_tier, player, team, season, player_position
+    group by date, moment_tier, player, team, season, play_type, player_position
     """
     return pd.DataFrame(sdk.query(daily_sales_sql).records)
+
+
+def human_format(nums):
+    for i, num in enumerate(nums):
+        magnitude = 0
+        if float(num) >= 0:
+            while abs(num) >= 1000:
+                magnitude += 1
+                num /= 1000.0
+            nums[i] = f'{round(num, 2)} {["", "K", "M", "G", "T", "P"][magnitude]}'
+        else:
+            nums[i] = num
+    # add more suffixes if you need them
+    return nums
 
 
 st.text("")
@@ -98,134 +121,18 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(
     ]
 )
 
-with st.spinner("Stay tight lads, we're reading data..."):
+with st.spinner("Stay tight lads, we're throwing around the old pig skin..."):
     df_daily_sales = load_data()
 df_daily_sales.date = pd.to_datetime(df_daily_sales.date)
 df_sum = df_daily_sales.groupby("date").sum().reset_index()
 df_preseason = df_sum[df_sum.date >= datetime(2022, 8, 4)]
 df_preseason = df_preseason[df_preseason.date <= datetime(2022, 8, 28)]
+df_since_preseason = df_daily_sales[df_daily_sales.date > datetime(2022, 8, 28)]
 
 with tab1:
     st.subheader("How did daily sales go during this Preseason")
+    st.plotly_chart(get_daily_trends(df_sum), use_container_width=True)
 
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
-
-    fig.add_trace(
-        go.Bar(x=df_sum["date"], y=df_sum["total"], name="Daily Sales Volume(USD)"),
-        secondary_y=False,
-    )
-    fig.add_trace(
-        go.Scatter(x=df_sum.date, y=df_sum.sales, name="Number of Daily Sales"),
-        secondary_y=True,
-    )
-    fig.add_vrect(
-        x0="2022-08-04",
-        x1="2022-08-07",
-        annotation_text="Hall of Fame Weekend",
-        annotation_position="inside top right",
-        annotation_textangle=90,
-        annotation_font_size=16,
-        annotation_font_color="orange",
-        fillcolor="yellow",
-        line_color="white",
-        opacity=0.25,
-        line_width=2,
-        line_dash="solid",
-    )
-
-    fig.add_vline(
-        x="2022-08-04",
-        line_color="white",
-        line_width=2,
-        line_dash="dash",
-    )
-    fig.add_annotation(
-        x="2022-08-04",
-        y=395000,
-        text=f"Preseason start",
-        yanchor="top",
-        showarrow=True,
-        arrowhead=1,
-        arrowsize=1,
-        arrowwidth=2,
-        arrowcolor="#636363",
-        font=dict(size=16, color="green", family="Courier New, monospace, bold"),
-        bordercolor="green",
-        borderwidth=2,
-        bgcolor="#CFECEC",
-        opacity=0.6,
-    )
-
-    fig.add_vrect(
-        x0="2022-08-11",
-        x1="2022-08-14",
-        annotation_text="First Preseason Weekend",
-        annotation_position="inside top left",
-        annotation_textangle=90,
-        annotation_font_size=16,
-        annotation_font_color="gray",
-        fillcolor="Green",
-        opacity=0.3,
-        line_width=0,
-        line_dash="dash",
-    )
-
-    fig.add_vrect(
-        x0="2022-08-18",
-        x1="2022-08-22",
-        annotation_text="Second Preseason Weekend",
-        annotation_position="inside top left",
-        annotation_textangle=90,
-        annotation_font_size=16,
-        annotation_font_color="gray",
-        fillcolor="Green",
-        opacity=0.3,
-        line_color="white",
-        line_width=0,
-        line_dash="dash",
-    )
-
-    fig.add_vrect(
-        x0="2022-08-25",
-        x1="2022-08-28",
-        annotation_text="Third Preseason Weekend",
-        annotation_position="inside top left",
-        annotation_textangle=90,
-        annotation_font_size=16,
-        annotation_font_color="gray",
-        fillcolor="Green",
-        opacity=0.3,
-        line_width=0,
-    )
-
-    fig.add_vline(
-        x="2022-08-28",
-        line_color="white",
-        line_width=2,
-        line_dash="dash",
-    )
-    fig.add_annotation(
-        x="2022-08-28",
-        y=395000,
-        text=f"Preseason end",
-        yanchor="top",
-        showarrow=True,
-        arrowhead=1,
-        arrowsize=1,
-        arrowwidth=2,
-        arrowcolor="#636363",
-        font=dict(size=16, color="green", family="Courier New, monospace, bold"),
-        bordercolor="green",
-        borderwidth=2,
-        bgcolor="#CFECEC",
-        opacity=0.6,
-    )
-    fig.update_xaxes(title="Date")
-    fig.update_yaxes(title="Number of Sales", secondary_y=True)
-    fig.update_yaxes(title="Sales Volume (USD)", secondary_y=False)
-    # fig.update_layout(title="How did daily Sales volume change?")
-
-    st.plotly_chart(fig, use_container_width=True)
     m_col1, m_col2, m_col3, m_col4 = st.columns(4)
     m_col1.metric(
         "Total Sales Volume in Preseason(USD)", f"$ {df_preseason.total.sum()}"
@@ -240,130 +147,18 @@ with tab1:
         ),
     )
 
-    weekends = df_preseason[
-        df_preseason.date.isin(
-            [
-                datetime(2022, 8, 4),
-                datetime(2022, 8, 5),
-                datetime(2022, 8, 6),
-                datetime(2022, 8, 7),
-                datetime(2022, 8, 11),
-                datetime(2022, 8, 12),
-                datetime(2022, 8, 13),
-                datetime(2022, 8, 14),
-                datetime(2022, 8, 18),
-                datetime(2022, 8, 19),
-                datetime(2022, 8, 20),
-                datetime(2022, 8, 21),
-                datetime(2022, 8, 22),
-                datetime(2022, 8, 25),
-                datetime(2022, 8, 26),
-                datetime(2022, 8, 27),
-                datetime(2022, 8, 28),
-            ]
-        )
-    ]
-
-    non_weekends = df_preseason[
-        ~df_preseason.date.isin(
-            [
-                datetime(2022, 8, 4),
-                datetime(2022, 8, 5),
-                datetime(2022, 8, 6),
-                datetime(2022, 8, 7),
-                datetime(2022, 8, 11),
-                datetime(2022, 8, 12),
-                datetime(2022, 8, 13),
-                datetime(2022, 8, 14),
-                datetime(2022, 8, 18),
-                datetime(2022, 8, 19),
-                datetime(2022, 8, 20),
-                datetime(2022, 8, 21),
-                datetime(2022, 8, 22),
-                datetime(2022, 8, 25),
-                datetime(2022, 8, 26),
-                datetime(2022, 8, 27),
-                datetime(2022, 8, 28),
-            ]
-        )
-    ]
-
     m_col4.metric(
         "The Volumes in Weekends than in other days in Preseason",
-        f"{round(weekends.total.sum() / non_weekends.total.sum(), 1)}X",
+        f"{round(get_weekends(df_preseason).total.sum() / get_non_weekends(df_preseason).total.sum(), 1)}X",
     )
     st.info(
-        "The interest seems to have picked up with the Preseason, specially in the **Hall of Fame Weekend** and The **Second Preseason Weekend**. On average weekends saw a **3.6 X** increase in sales volume than the other days during the preseason. However the interest had died down since the Third weekend."
+        "The interest seems to have picked up with the Preseason, specially in the **Hall of Fame Weekend** and The **Second Preseason Weekend**. On average weekends saw a **3.6 X** increase in sales volume than the other days during the preseason. However the interest had died down since then but the fan interest has picked up since the start of the season."
     )
 
-    df_team = df_daily_sales.groupby(["team", "date"]).sum().reset_index()
-    df_team = pd.merge(df_team, df_team.groupby("date").sum().reset_index(), on="date")
-    df_team["perc"] = df_team.total_x * 100 / df_team.total_y
-    fig_team_perc = px.area(
-        df_team,
-        x="date",
-        y="perc",
-        color="team",
-        labels=dict(perc="Percentage (%)", date="Date"),
-    )
-
-    fig_team_perc.add_vrect(
-        x0="2022-08-04",
-        x1="2022-08-07",
-        annotation_text="Hall of Fame Weekend",
-        annotation_position="inside top left",  # annotation_textangle = 90,
-        annotation_font_size=14,
-        annotation_font_color="white",
-        # fillcolor="yellow",
-        line_color="white",
-        opacity=1,
-        line_width=2,
-        line_dash="dash",
-    )
-
-    fig_team_perc.add_vrect(
-        x0="2022-08-11",
-        x1="2022-08-14",
-        annotation_text="First Preseason Weekend",
-        annotation_position="inside top left",  # annotation_textangle = 90,
-        annotation_font_size=14,
-        annotation_font_color="white",
-        # fillcolor="Green",
-        opacity=1,
-        line_width=2,
-        line_dash="dash",
-    )
-
-    fig_team_perc.add_vrect(
-        x0="2022-08-18",
-        x1="2022-08-22",
-        annotation_text="Second Preseason Weekend",
-        annotation_position="inside top left",  # annotation_textangle = 90,
-        annotation_font_size=14,
-        annotation_font_color="white",
-        # fillcolor="Green",
-        opacity=1,
-        line_color="white",
-        line_width=2,
-        line_dash="dash",
-    )
-
-    fig_team_perc.add_vrect(
-        x0="2022-08-25",
-        x1="2022-08-28",
-        annotation_text="Third Preseason Weekend",
-        annotation_position="inside top left",  # annotation_textangle = 90,
-        annotation_font_size=14,
-        annotation_font_color="white",
-        # fillcolor="Green",
-        opacity=1,
-        line_width=2,
-        line_dash="dash",
-    )
     st.markdown("""---""")
     st.text("")
     st.subheader("Do the match schedule impact the team popularity")
-    st.plotly_chart(fig_team_perc, use_container_width=True)
+    st.plotly_chart(get_daily_team_fig(df_daily_sales), use_container_width=True)
     g_col1, g_col2 = st.columns(2)
     g_col1.image(
         "https://raw.githubusercontent.com/jokersden/nflallday/main/images/hof.png"
@@ -414,7 +209,7 @@ with tab2:
     )
     fig_team_season_avg.update_traces(
         hovertemplate="<br>".join(
-            ["Team: %{x}", "Season: %{y}", "Average Price: %{hovertext:.2f} USD"]
+            ["Team: %{x}", "Season: %{y}", "Average Price: $ %{hovertext:.2f}"]
         )
     )
     # st.subheader("Which team had priceless moments")
@@ -460,12 +255,13 @@ with tab2:
             x=pivotted.columns.tolist(),
             y=pivotted.index.tolist(),
             hoverongaps=False,
-            hovertext=np.exp(pivotted.values).tolist(),
+            hovertext=[human_format(item) for item in np.exp(pivotted.values).tolist()],
         )
     )
+
     fig_team_season_tot.update_traces(
         hovertemplate="<br>".join(
-            ["Team: %{x}", "Season: %{y}", "Total Volume: %{hovertext:.2f} USD"]
+            ["Team: %{x}", "Season: %{y}", "Total Volume: $ %{hovertext}"]
         )
     )
     fig_team_season_tot.update_layout(
@@ -482,25 +278,81 @@ with tab2:
 
 
 with tab3:
-    df_daily_sales_ps.loc[df_daily_sales_ps.player == "N/A", "player"] = "Team Play"
+    dataframes = {
+        "After Preseason": df_since_preseason,
+        "During Preseason": df_daily_sales_ps,
+    }
+    val = st.selectbox(
+        "Select the timeframe", options=["During Preseason", "After Preseason"]
+    )
+
+    df_daily_sales_ps_player_season = dataframes[val]
+
+    df_daily_sales_ps_player_season.loc[
+        df_daily_sales_ps_player_season.player == "N/A", "player"
+    ] = "Team Play"
+
+    df_daily_sales_ps_player_season = (
+        df_daily_sales_ps_player_season.groupby(["player", "season"])
+        .agg({"total": lambda x: (np.sum(x))})
+        .reset_index()
+    )
+    df_daily_sales_ps_player_season = pd.merge(
+        df_daily_sales_ps_player_season,
+        df_daily_sales_ps_player_season.groupby(["player"])
+        .sum()
+        .reset_index()
+        .nlargest(50, columns="total"),
+        on="player",
+    ).sort_values(by="total_y", ascending=False)
+
     st.plotly_chart(
         px.bar(
-            df_daily_sales_ps.groupby(["player", "season"])
-            .agg({"total": lambda x: (np.sum(x))})
-            .reset_index(),
+            df_daily_sales_ps_player_season,
             x="player",
-            y="total",
+            y="total_x",
             color="season",
+            category_orders={
+                "player": df_daily_sales_ps_player_season["player"].to_list()
+            },
+            title=f"Top 50 most valuable players {val}",
+            labels=dict(total_x="Value (USD)", player="Player Name"),
         ),
         use_container_width=True,
     )
+
+    df_daily_sales_moment_playtype = (
+        dataframes[val].groupby(["play_type", "moment_tier"]).sum().reset_index()
+    )
+    fig_moment_playtype = px.bar(
+        df_daily_sales_moment_playtype,
+        x="play_type",
+        y="total",
+        color="moment_tier",
+        text="total",
+        title=f"What moments were most sought out {val}",
+        labels=dict(play_type="Play Type", total="Amount (USD)", moment_tier="Tier"),
+    )
+    fig_moment_playtype.update_traces(
+        hovertemplate="<br>".join(
+            [
+                "Play Type: %{x}",
+                "Volume: $%{y:,.2f}",
+            ]
+        )
+    )
+    fig_moment_playtype.update_layout(legend=dict())
+    st.plotly_chart(
+        fig_moment_playtype,
+        use_container_width=True,
+    )
+
     pivotted = (
-        df_daily_sales_ps.groupby(["player", "team"])
+        df_daily_sales_ps.groupby(["player", "season"])
         .agg({"avg_price": lambda x: np.log(np.mean(x))})
         .reset_index()
-        .pivot("player", "team", values="avg_price")
+        .pivot("player", "season", values="avg_price")
     )
-    # pivotted.avg_price = np.log(pivotted.avg_price)
 
     fig_player_season = go.Figure(
         data=go.Heatmap(
@@ -520,7 +372,6 @@ with tab4:
         .reset_index()
         .pivot("moment_tier", "season", values="avg_price")
     )
-    # pivotted.avg_price = np.log(pivotted.avg_price)
 
     fig_moment_season = go.Figure(
         data=go.Heatmap(
@@ -529,6 +380,11 @@ with tab4:
             y=pivotted.index.tolist(),
             hoverongaps=False,
             hovertext=np.exp(pivotted.values).tolist(),
+        )
+    )
+    fig_moment_season.update_traces(
+        hovertemplate="<br>".join(
+            ["Tier: %{x}", "Season: %{y}", "Average Price: %{hovertext:.2f} USD"]
         )
     )
     st.plotly_chart(fig_moment_season, use_container_width=True)
