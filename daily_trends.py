@@ -123,7 +123,9 @@ def get_daily_trends(df_sum):
     fig.update_xaxes(title="Date")
     fig.update_yaxes(title="Number of Sales", secondary_y=True)
     fig.update_yaxes(title="Sales Volume (USD)", secondary_y=False)
-    # fig.update_layout(title="How did daily Sales volume change?")
+    fig.update_layout(
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
     return fig
 
 
@@ -192,4 +194,5 @@ def get_daily_team_fig(df_daily_sales):
         line_width=2,
         line_dash="dash",
     )
+
     return fig_team_perc

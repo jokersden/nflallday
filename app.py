@@ -11,8 +11,11 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.io as pio
 
-from daily import get_daily_team_fig, get_daily_trends
-from utils import get_non_weekends, get_weekends
+from daily_trends import get_daily_team_fig, get_daily_trends
+from player_trends import get_fig_moment_playtype, get_fig_player_seasons
+from seasonal_trends import get_fig_moment_season
+from team_trends import get_fig_moment, get_fig_team_season, get_fig_team_season_total
+from utils import get_non_weekends, get_weekends, human_format
 
 pio.templates.default = "plotly_dark"
 
@@ -85,20 +88,6 @@ def load_data():
     return pd.DataFrame(sdk.query(daily_sales_sql).records)
 
 
-def human_format(nums):
-    for i, num in enumerate(nums):
-        magnitude = 0
-        if float(num) >= 0:
-            while abs(num) >= 1000:
-                magnitude += 1
-                num /= 1000.0
-            nums[i] = f'{round(num, 2)} {["", "K", "M", "G", "T", "P"][magnitude]}'
-        else:
-            nums[i] = num
-    # add more suffixes if you need them
-    return nums
-
-
 st.text("")
 date_col1, date_col2, date_col3 = st.columns(3)
 date_col1.metric(
@@ -128,6 +117,13 @@ df_sum = df_daily_sales.groupby("date").sum().reset_index()
 df_preseason = df_sum[df_sum.date >= datetime(2022, 8, 4)]
 df_preseason = df_preseason[df_preseason.date <= datetime(2022, 8, 28)]
 df_since_preseason = df_daily_sales[df_daily_sales.date > datetime(2022, 8, 28)]
+df_daily_sales_ps = df_daily_sales[df_daily_sales.date >= datetime(2022, 8, 4)]
+df_daily_sales_ps = df_daily_sales_ps[df_daily_sales_ps.date <= datetime(2022, 8, 28)]
+
+dataframes = {
+    "After Preseason": df_since_preseason,
+    "During Preseason": df_daily_sales_ps,
+}
 
 with tab1:
     st.subheader("How did daily sales go during this Preseason")
@@ -186,164 +182,44 @@ with tab1:
     st.error("Team trends in next tab...", icon="🏈")
 
 with tab2:
-    df_daily_sales_ps = df_daily_sales[df_daily_sales.date >= datetime(2022, 8, 4)]
-    df_daily_sales_ps = df_daily_sales_ps[
-        df_daily_sales_ps.date <= datetime(2022, 8, 28)
-    ]
-
-    pivotted = (
-        df_daily_sales_ps.groupby(["season", "team"])
-        .agg({"avg_price": lambda x: np.log(np.mean(x))})
-        .reset_index()
-        .pivot("season", "team", values="avg_price")
+    val_team = st.selectbox(
+        "Select the timeframe",
+        options=["During Preseason", "After Preseason"],
+        key="team",
     )
 
-    fig_team_season_avg = go.Figure(
-        data=go.Heatmap(
-            z=pivotted.values.tolist(),
-            x=pivotted.columns.tolist(),
-            y=pivotted.index.tolist(),
-            hoverongaps=False,
-            hovertext=np.exp(pivotted.values).tolist(),
-        ),
+    st.plotly_chart(
+        get_fig_moment(dataframes[val_team], val_team), use_container_width=True
     )
-    fig_team_season_avg.update_traces(
-        hovertemplate="<br>".join(
-            ["Team: %{x}", "Season: %{y}", "Average Price: $ %{hovertext:.2f}"]
-        )
-    )
-    # st.subheader("Which team had priceless moments")
-    fig_team_season_avg.update_layout(
-        title="Which moments were most priceless based on the sales happened during the Preseason",
-        yaxis={
-            "title": "Season",
-        },
-        xaxis={"title": "Team", "tickangle": 45},
-        # yaxis_nticks=len(pivotted.index)
-    )
-    st.plotly_chart(fig_team_season_avg, use_container_width=True)
     st.info("")
     team_col1, team_col2 = st.columns(2)
-    fig_moment = px.bar(
-        df_daily_sales_ps.groupby(["team", "moment_tier"])
-        .sum()
-        .reset_index()
-        .sort_values(by="total", ascending=False),
-        x="team",
-        y="total",
-        color="moment_tier",
-        text="total",
-        labels=dict(team="Team", moment_tier="Tier", total="Volume (USD)"),
-    )
-    fig_moment.update_layout(
-        title="Teams sales based on moment tier during the Preseason"
-    )
     team_col1.plotly_chart(
-        fig_moment,
+        get_fig_team_season_total(dataframes[val_team], val_team),
         use_container_width=True,
     )
-    pivotted = (
-        df_daily_sales_ps.groupby(["team", "season"])
-        .agg({"total": lambda x: np.log(np.sum(x))})
-        .reset_index()
-        .pivot("season", "team", values="total")
-    )
 
-    fig_team_season_tot = go.Figure(
-        data=go.Heatmap(
-            z=pivotted.values.tolist(),
-            x=pivotted.columns.tolist(),
-            y=pivotted.index.tolist(),
-            hoverongaps=False,
-            hovertext=[human_format(item) for item in np.exp(pivotted.values).tolist()],
-        )
+    team_col2.plotly_chart(
+        get_fig_team_season(dataframes[val_team], val_team), use_container_width=True
     )
-
-    fig_team_season_tot.update_traces(
-        hovertemplate="<br>".join(
-            ["Team: %{x}", "Season: %{y}", "Total Volume: $ %{hovertext}"]
-        )
-    )
-    fig_team_season_tot.update_layout(
-        title="Which teams and seasons were the most popular during the Preseason",
-        yaxis={
-            "title": "Season",
-        },
-        xaxis={"title": "Team", "tickangle": 45},
-        # yaxis_nticks=len(pivotted.index)
-    )
-    team_col2.plotly_chart(fig_team_season_tot, use_container_width=True)
     st.info("")
-    # st.video("https://www.youtube.com/watch?v=VjDsksvzXwg")
+    st.error("Player trends in next tab...", icon="🏈")
 
 
 with tab3:
-    dataframes = {
-        "After Preseason": df_since_preseason,
-        "During Preseason": df_daily_sales_ps,
-    }
-    val = st.selectbox(
-        "Select the timeframe", options=["During Preseason", "After Preseason"]
+
+    val_player = st.selectbox(
+        "Select the timeframe",
+        options=["During Preseason", "After Preseason"],
+        key="player",
     )
-
-    df_daily_sales_ps_player_season = dataframes[val]
-
-    df_daily_sales_ps_player_season.loc[
-        df_daily_sales_ps_player_season.player == "N/A", "player"
-    ] = "Team Play"
-
-    df_daily_sales_ps_player_season = (
-        df_daily_sales_ps_player_season.groupby(["player", "season"])
-        .agg({"total": lambda x: (np.sum(x))})
-        .reset_index()
-    )
-    df_daily_sales_ps_player_season = pd.merge(
-        df_daily_sales_ps_player_season,
-        df_daily_sales_ps_player_season.groupby(["player"])
-        .sum()
-        .reset_index()
-        .nlargest(50, columns="total"),
-        on="player",
-    ).sort_values(by="total_y", ascending=False)
 
     st.plotly_chart(
-        px.bar(
-            df_daily_sales_ps_player_season,
-            x="player",
-            y="total_x",
-            color="season",
-            category_orders={
-                "player": df_daily_sales_ps_player_season["player"].to_list()
-            },
-            title=f"Top 50 most valuable players {val}",
-            labels=dict(total_x="Value (USD)", player="Player Name"),
-        ),
+        get_fig_player_seasons(dataframes[val_player], val_player),
         use_container_width=True,
     )
 
-    df_daily_sales_moment_playtype = (
-        dataframes[val].groupby(["play_type", "moment_tier"]).sum().reset_index()
-    )
-    fig_moment_playtype = px.bar(
-        df_daily_sales_moment_playtype,
-        x="play_type",
-        y="total",
-        color="moment_tier",
-        text="total",
-        title=f"What moments were most sought out {val}",
-        labels=dict(play_type="Play Type", total="Amount (USD)", moment_tier="Tier"),
-    )
-    fig_moment_playtype.update_traces(
-        hovertemplate="<br>".join(
-            [
-                "Play Type: %{x}",
-                "Volume: $%{y:,.2f}",
-            ]
-        )
-    )
-    fig_moment_playtype.update_layout(legend=dict())
     st.plotly_chart(
-        fig_moment_playtype,
+        get_fig_moment_playtype(dataframes[val_player], val_player),
         use_container_width=True,
     )
 
@@ -366,28 +242,8 @@ with tab3:
     st.plotly_chart(fig_player_season, use_container_width=True)
 
 with tab4:
-    pivotted = (
-        df_daily_sales_ps.groupby(["moment_tier", "season"])
-        .agg({"avg_price": lambda x: np.log(np.mean(x))})
-        .reset_index()
-        .pivot("moment_tier", "season", values="avg_price")
-    )
 
-    fig_moment_season = go.Figure(
-        data=go.Heatmap(
-            z=pivotted.values.tolist(),
-            x=pivotted.columns.tolist(),
-            y=pivotted.index.tolist(),
-            hoverongaps=False,
-            hovertext=np.exp(pivotted.values).tolist(),
-        )
-    )
-    fig_moment_season.update_traces(
-        hovertemplate="<br>".join(
-            ["Tier: %{x}", "Season: %{y}", "Average Price: %{hovertext:.2f} USD"]
-        )
-    )
-    st.plotly_chart(fig_moment_season, use_container_width=True)
+    st.plotly_chart(get_fig_moment_season(df_daily_sales_ps), use_container_width=True)
     st.info("")
 
 with tab5:
