@@ -187,6 +187,9 @@ with tab1:
     st.error("Team trends in next tab...", icon="🏈")
 
 with tab2:
+    st.error(
+        "You can switch between preseason data and data since preseason from below."
+    )
     val_team = st.selectbox(
         "Select the timeframe",
         options=["During Preseason", "After Preseason"],
@@ -228,7 +231,9 @@ with tab2:
 
 
 with tab3:
-
+    st.error(
+        "You can switch between preseason data and data since preseason from below."
+    )
     val_player = st.selectbox(
         "Select the timeframe",
         options=["During Preseason", "After Preseason"],
@@ -239,27 +244,45 @@ with tab3:
         get_fig_player_seasons(dataframes[val_player], val_player),
         use_container_width=True,
     )
-    st.info("Well well well, Tom Brady and his 2021 moments have been what fans have spent their $$ on, barring the N/A or Team Play as a player. "
-    "41 out of top 50 most sold players during preseason, found that successful moments in 2021. "
-    " However since the preseason ended on 28th August, Gabriel Davis has taken the spotlight so far (13th of September). Interestingly Julio Jones who is at 4th amongst the most sold player since preseason ends, "
-    "and his 2011 moments were also sold apart from the 2021 moments. Similar trends can be seen for Stefon Diggs, Davante Adams"
-    " Odell Beckham Jr and Richard Sherman. Where their previous seasons have also surfaced along with 2021 moments.")
+    st.info(
+        "Well well well, Tom Brady and his 2021 moments have been what fans have spent their $$ on, barring the N/A or Team Play as a player. "
+        "41 out of top 50 most sold players during preseason, found that successful moments in 2021. "
+        " However since the preseason ended on 28th August, Gabriel Davis has taken the spotlight so far (13th of September). Interestingly Julio Jones who is at 4th amongst the most sold player since preseason ends, "
+        "and his 2011 moments were also sold apart from the 2021 moments. Similar trends can be seen for Stefon Diggs, Davante Adams"
+        " Odell Beckham Jr and Richard Sherman. Where their previous seasons have also surfaced along with 2021 moments."
+    )
 
     st.plotly_chart(
         get_fig_player_seasons_price(dataframes[val_player], val_player),
         use_container_width=True,
     )
+    st.info(
+        "QB (quaterback) position seems to be the fan favorite, where they'd pay a high price to get moments from players who plays that position like Trey Lance, Aaron Rodgers"
+        " Trevor Lawrance, Tom Brady to name a few. And the other player position that people wanted at a higher price was WR (Wide Receiver)."
+        " during both preseason and after preseason Trey Lance, who plays QB, had his moments which were significantly higher than the other players."
+    )
     st.plotly_chart(
         get_fig_moment_playtype(dataframes[val_player], val_player),
         use_container_width=True,
+    )
+    st.info(
+        "Although Player Melt produced higher amount with legendary tier moments, Reception gained most $$ from moments sales during preseason as well as after preseason, followed by Pass during the preseason but Rush overtook Pass after preseason sales (insight: 13th Sept)."
+        " Ineterestingly Reception had the first Ultimate tier moment as well."
     )
     st.plotly_chart(
         get_fig_moment_player_position(dataframes[val_player], val_player),
         use_container_width=True,
     )
-
+    st.info(
+        "Although 2-Pt Attempt with a particular player position were pricier during the preseason sales, Tight End Player melts became more dominant in terms of the average price "
+        "since the end of the preseason until 13th Sept (at the time of this writing). However it was not that TE Player melt suddenly became pricier but the other moments with play types and positions which were pricier"
+        " previously during preseason, weren't seen on sale since the end of preseason, for example DL Pressure was $2.8K on average during preseason but Pressure play type wasn't on sale since 28th August to today, 13th September."
+    )
 
 with tab4:
+    st.error(
+        "You can switch between preseason data and data since preseason from below."
+    )
     val_season = st.selectbox(
         "Select the timeframe",
         options=["During Preseason", "After Preseason"],
@@ -269,12 +292,14 @@ with tab4:
         get_fig_moment_season(dataframes[val_season], val_season),
         use_container_width=True,
     )
-    st.info("")
+    st.info(
+        "Of course Legendary tier is expensive, and the legendary tier 2021 moments were the most expensive. However, After preseason an Ultimate tier 2014 moments were sold which is pricier than legendary."
+    )
 
 
 with tab5:
     st.write(
-        "This was created by joker#2418 as a part of the tournament organized by FlipsideCrypto on NFL AllDay data. Following source was used to find dates and other info: https://operations.nfl.com/gameday/nfl-schedule/2022-23-important-nfl-dates/"
+        "Hey friends, This was created by joker#2418 as a part of the tournament organized by FlipsideCrypto on NFL AllDay data. This dashboard was intended to show different trends in the buying during the Preseason specifically and then after the preseason. The insights were added on 13th of Spetember although the dashboard updates with ShroomDK. Following source was used to find dates and other info: https://operations.nfl.com/gameday/nfl-schedule/2022-23-important-nfl-dates/"
     )
     st.write(
         "Since the NFTs live on Flow chain, ```flow.core.ez_nft_sales``` along with ```flow.core.dim_allday_metadata``` tables were used. The dates were converted to US/New York time as the blockchain data is in UTC and the game is predominantly played, watched in the US, the times may not tell the story correctly if we don't adjust the times. Below is the SQL code:"
@@ -286,6 +311,8 @@ with tab5:
         player, 
         team, 
         season, 
+        play_type,
+        MOMENT_STATS_FULL:metadata:playerPosition as player_position,
         avg(price) as avg_price, 
         sum(price) as total, 
         count(distinct seller) as sellers,
@@ -298,6 +325,6 @@ with tab5:
     where 
         block_timestamp >= '2022-08-01' 
         and TX_SUCCEEDED='TRUE'
-    group by date, moment_tier, player, team, season""",
+    group by date, moment_tier, player, team, season, play_type, player_position""",
         language="sql",
     )
