@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
-from utils import human_format
+from myutils import human_format
 
 
 def get_fig_team_season(df_daily_sales_ps, val_team):

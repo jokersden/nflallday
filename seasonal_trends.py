@@ -2,7 +2,7 @@ import numpy as np
 
 import plotly.graph_objects as go
 
-from utils import human_format
+from myutils import human_format
 
 
 def get_fig_moment_season(df_daily_sales_ps, val_season):

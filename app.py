@@ -20,7 +20,7 @@ from player_trends import (
 )
 from seasonal_trends import get_fig_moment_season
 from team_trends import get_fig_moment, get_fig_team_season, get_fig_team_season_total
-from utils import get_non_weekends, get_weekends, human_format
+from myutils import get_non_weekends, get_weekends, human_format
 
 pio.templates.default = "plotly_dark"
 
@@ -59,7 +59,7 @@ hide_st_style = """
             header {visibility: hidden;}
             </style>
             """
-# st.markdown(hide_st_style, unsafe_allow_html=True)
+st.markdown(hide_st_style, unsafe_allow_html=True)
 
 
 st.success("Please Note: All the dates and time are in US/New York time.", icon="⏰")

@@ -1,5 +1,6 @@
 from datetime import datetime
 
+
 def get_weekends(df_preseason):
     return df_preseason[
         df_preseason.date.isin(
@@ -25,6 +26,7 @@ def get_weekends(df_preseason):
         )
     ]
 
+
 def get_non_weekends(df_preseason):
     return df_preseason[
         ~df_preseason.date.isin(
@@ -49,6 +51,7 @@ def get_non_weekends(df_preseason):
             ]
         )
     ]
+
 
 def human_format(nums):
     for i, num in enumerate(nums):
