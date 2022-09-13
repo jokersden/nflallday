@@ -31,7 +31,7 @@ def get_fig_team_season(df_daily_sales_ps, val_team):
     )
     # st.subheader("Which team had priceless moments")
     fig_team_season_avg.update_layout(
-        title=f"Which moments were most priceless based on the sales happened {val_team}",
+        title=f"Which moments were most priceless {val_team} (Average price per NFT)",
         yaxis={
             "title": "Season",
         },
@@ -50,10 +50,8 @@ def get_fig_moment(df_daily_sales_ps, val_team):
     )
     df_daily_sales_ps_moment = pd.merge(
         df_daily_sales_ps_moment,
-        df_daily_sales_ps_moment.groupby(["team"])
-        .sum()
-        .reset_index()
-        .nlargest(50, columns="total"),
+        df_daily_sales_ps_moment.groupby(["team"]).sum().reset_index(),
+        # .nlargest(50, columns="total"),
         on="team",
     ).sort_values(by="total_y", ascending=False)
 
@@ -97,7 +95,7 @@ def get_fig_team_season_total(df_daily_sales_ps, val_team):
         )
     )
     fig_team_season_tot.update_layout(
-        title=f"Which teams and seasons were the most popular {val_team}",
+        title=f"Which teams and seasons amongst the highest total value {val_team} (Total $$ value)",
         yaxis={
             "title": "Season",
         },

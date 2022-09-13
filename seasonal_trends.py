@@ -2,8 +2,10 @@ import numpy as np
 
 import plotly.graph_objects as go
 
+from utils import human_format
 
-def get_fig_moment_season(df_daily_sales_ps):
+
+def get_fig_moment_season(df_daily_sales_ps, val_season):
     pivotted = (
         df_daily_sales_ps.groupby(["moment_tier", "season"])
         .agg({"avg_price": lambda x: np.log(np.mean(x))})
@@ -17,12 +19,15 @@ def get_fig_moment_season(df_daily_sales_ps):
             x=pivotted.columns.tolist(),
             y=pivotted.index.tolist(),
             hoverongaps=False,
-            hovertext=np.exp(pivotted.values).tolist(),
+            hovertext=[human_format(item) for item in np.exp(pivotted.values).tolist()]
         )
     )
     fig_moment_season.update_traces(
         hovertemplate="<br>".join(
-            ["Tier: %{x}", "Season: %{y}", "Average Price: %{hovertext:.2f} USD"]
+            ["Season: %{x}", "Tier: %{y}", "Average Price: $ %{hovertext}"]
         )
+    )
+    fig_moment_season.update_layout(
+        title=f"Which tiers and seasons were popular {val_season}"
     )
     return fig_moment_season

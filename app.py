@@ -12,7 +12,12 @@ from plotly.subplots import make_subplots
 import plotly.io as pio
 
 from daily_trends import get_daily_team_fig, get_daily_trends
-from player_trends import get_fig_moment_playtype, get_fig_player_seasons
+from player_trends import (
+    get_fig_moment_player_position,
+    get_fig_moment_playtype,
+    get_fig_player_seasons,
+    get_fig_player_seasons_price,
+)
 from seasonal_trends import get_fig_moment_season
 from team_trends import get_fig_moment, get_fig_team_season, get_fig_team_season_total
 from utils import get_non_weekends, get_weekends, human_format
@@ -191,7 +196,15 @@ with tab2:
     st.plotly_chart(
         get_fig_moment(dataframes[val_team], val_team), use_container_width=True
     )
-    st.info("")
+    st.warning(
+        "ULTIMATE tier has been added after the Preseason... New York Giants were the first to sell the first Ultimate tier moment!!"
+    )
+    st.info(
+        "During the Preseason Jacksonwille Jaguars were very popular and they have sold the highest volume in sales, followed by the Packers."
+        " However, 49ers was Legendary because they were the highest in terms of legendary tier volume and Raiders had all their sales in Legendary tier but volume wasn't big compared to other teams."
+        "After the preseason and the first weekend of the season, Bills have turned around the tables and already (on 13th of September) accounted for the"
+        " highest amount of sales volume. Their victory against Rams on 9th may have sparked some interest among the fans to buy some of their exclusive moments."
+    )
     team_col1, team_col2 = st.columns(2)
     team_col1.plotly_chart(
         get_fig_team_season_total(dataframes[val_team], val_team),
@@ -201,7 +214,16 @@ with tab2:
     team_col2.plotly_chart(
         get_fig_team_season(dataframes[val_team], val_team), use_container_width=True
     )
-    st.info("")
+    st.info(
+        "Moments from 2021 were obviously the fan favorite in terms of the total value and also majority of the teams "
+        "had sold 2021 moments more often than other years. Packers seems to have priceless moments across multiple years/seasons"
+        " than any other team? Does this mean they are pretty consistent and a fan favorite throughout the time?"
+        " Vikings 2009 moments were the most priceless suring the preseason as it had the highest average price among all the teams across seasons."
+        ""
+        "Interestingly, New York Giants have sold the most priceless moments after the preseason end till now (13th Sept), the Giants were able to sell the Ultimate tier."
+        " Even post preseason time period shows the legendary Packers have their moments being sold across multiple seasons than many other team. Again I am asking YOU, are packers consistently produce important moments in literally every season? :) "
+        " Although Bills have the highest volume that predominantly coming from 2021 season's moments."
+    )
     st.error("Player trends in next tab...", icon="🏈")
 
 
@@ -217,34 +239,38 @@ with tab3:
         get_fig_player_seasons(dataframes[val_player], val_player),
         use_container_width=True,
     )
+    st.info("Well well well, Tom Brady and his 2021 moments have been what fans have spent their $$ on, barring the N/A or Team Play as a player. "
+    "41 out of top 50 most sold players during preseason, found that successful moments in 2021. "
+    " However since the preseason ended on 28th August, Gabriel Davis has taken the spotlight so far (13th of September). Interestingly Julio Jones who is at 4th amongst the most sold player since preseason ends, "
+    "and his 2011 moments were also sold apart from the 2021 moments. Similar trends can be seen for Stefon Diggs, Davante Adams"
+    " Odell Beckham Jr and Richard Sherman. Where their previous seasons have also surfaced along with 2021 moments.")
 
+    st.plotly_chart(
+        get_fig_player_seasons_price(dataframes[val_player], val_player),
+        use_container_width=True,
+    )
     st.plotly_chart(
         get_fig_moment_playtype(dataframes[val_player], val_player),
         use_container_width=True,
     )
-
-    pivotted = (
-        df_daily_sales_ps.groupby(["player", "season"])
-        .agg({"avg_price": lambda x: np.log(np.mean(x))})
-        .reset_index()
-        .pivot("player", "season", values="avg_price")
+    st.plotly_chart(
+        get_fig_moment_player_position(dataframes[val_player], val_player),
+        use_container_width=True,
     )
 
-    fig_player_season = go.Figure(
-        data=go.Heatmap(
-            z=pivotted.values.tolist(),
-            x=pivotted.columns.tolist(),
-            y=pivotted.index.tolist(),
-            hoverongaps=False,
-            hovertext=np.exp(pivotted.values).tolist(),
-        )
-    )
-    st.plotly_chart(fig_player_season, use_container_width=True)
 
 with tab4:
-
-    st.plotly_chart(get_fig_moment_season(df_daily_sales_ps), use_container_width=True)
+    val_season = st.selectbox(
+        "Select the timeframe",
+        options=["During Preseason", "After Preseason"],
+        key="season",
+    )
+    st.plotly_chart(
+        get_fig_moment_season(dataframes[val_season], val_season),
+        use_container_width=True,
+    )
     st.info("")
+
 
 with tab5:
     st.write(
