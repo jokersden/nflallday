@@ -18,7 +18,7 @@ from player_trends import (
     get_fig_player_seasons,
     get_fig_player_seasons_price,
 )
-from seasonal_trends import get_fig_moment_season
+from seasonal_trends import get_fig_moment_season, get_fig_week_season
 from team_trends import get_fig_moment, get_fig_team_season, get_fig_team_season_total
 from myutils import get_non_weekends, get_weekends, human_format
 
@@ -74,6 +74,7 @@ def load_data():
         player, 
         team, 
         season, 
+        week,
         play_type,
         MOMENT_STATS_FULL:metadata:playerPosition as player_position,
         avg(price) as avg_price, 
@@ -88,7 +89,7 @@ def load_data():
     where 
         block_timestamp >= '2022-08-01' 
         and TX_SUCCEEDED='TRUE'
-    group by date, moment_tier, player, team, season, play_type, player_position
+    group by date, moment_tier, player, team, season, week, play_type, player_position
     """
     return pd.DataFrame(sdk.query(daily_sales_sql).records)
 
@@ -183,7 +184,8 @@ with tab1:
         "8th and 9th with the victory of the opening match. Rams seems to have had some interest among fans before their game "
         "with Bills on 7th and 8th September."
     )
-
+    st.markdown("---")
+    st.markdown("---")
     st.error("Team trends in next tab...", icon="🏈")
 
 with tab2:
@@ -227,6 +229,8 @@ with tab2:
         " Even post preseason time period shows the legendary Packers have their moments being sold across multiple seasons than many other team. Again I am asking YOU, are packers consistently produce important moments in literally every season? :) "
         " Although Bills have the highest volume that predominantly coming from 2021 season's moments."
     )
+    st.markdown("---")
+    st.markdown("---")
     st.error("Player trends in next tab...", icon="🏈")
 
 
@@ -278,6 +282,8 @@ with tab3:
         "since the end of the preseason until 13th Sept (at the time of this writing). However it was not that TE Player melt suddenly became pricier but the other moments with play types and positions which were pricier"
         " previously during preseason, weren't seen on sale since the end of preseason, for example DL Pressure was $2.8K on average during preseason but Pressure play type wasn't on sale since 28th August to today, 13th September."
     )
+    st.markdown("---")
+    st.markdown("---")
 
 with tab4:
     st.error(
@@ -295,6 +301,15 @@ with tab4:
     st.info(
         "Of course Legendary tier is expensive, and the legendary tier 2021 moments were the most expensive. However, After preseason an Ultimate tier 2014 moments were sold which is pricier than legendary."
     )
+    st.plotly_chart(
+        get_fig_week_season(dataframes[val_season], val_season),
+        use_container_width=True,
+    )
+    st.info(
+        "The week 14th has produced most of the memorable moments that fans have bought during and after preseason and 20th was the least. 2021 season dominates the volumes interms of season in all these weeks."
+    )
+    st.markdown("---")
+    st.markdown("---")
 
 
 with tab5:
@@ -311,6 +326,7 @@ with tab5:
         player, 
         team, 
         season, 
+        week,
         play_type,
         MOMENT_STATS_FULL:metadata:playerPosition as player_position,
         avg(price) as avg_price, 
@@ -325,6 +341,6 @@ with tab5:
     where 
         block_timestamp >= '2022-08-01' 
         and TX_SUCCEEDED='TRUE'
-    group by date, moment_tier, player, team, season, play_type, player_position""",
+    group by date, moment_tier, player, team, season, week, play_type, player_position""",
         language="sql",
     )
