@@ -20,7 +20,7 @@ from player_trends import (
 )
 from seasonal_trends import get_fig_moment_season, get_fig_week_season
 from team_trends import get_fig_moment, get_fig_team_season, get_fig_team_season_total
-from myutils import get_non_weekends, get_weekends, human_format
+from myutils import get_non_weekends, get_weekends, human_format, human_format_single
 
 pio.templates.default = "plotly_dark"
 
@@ -137,7 +137,8 @@ with tab1:
 
     m_col1, m_col2, m_col3, m_col4 = st.columns(4)
     m_col1.metric(
-        "Total Sales Volume in Preseason(USD)", f"$ {df_preseason.total.sum()}"
+        "Total Sales Volume in Preseason(USD)",
+        f"$ {human_format_single(df_preseason.total.sum())}",
     )
     m_col2.metric("Total number of Sales in Preseason", df_preseason.sales.sum())
     m_col3.metric(
